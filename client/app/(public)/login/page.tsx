@@ -4,10 +4,19 @@ import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Shield, ArrowRight, Lock, User as UserIcon, Loader2, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import {
+  ArrowRight,
+  Lock,
+  User as UserIcon,
+  Loader2,
+  Sparkles,
+  Gamepad2,
+  Eye,
+  EyeOff,
+  Flame,
+  CheckCircle2,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useApiClient } from "@/hooks/useApiClient";
 import { setNativeSession } from "@/features/auth/nativeAuth";
 import { setGuestSession } from "@/features/auth/guestAuth";
@@ -22,14 +31,17 @@ function LoginForm() {
 
   const [emailOrUsername, setEmailOrUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
-  const [error, setError] = useState<string | null>(urlError ? decodeURIComponent(urlError) : null);
+  const [error, setError] = useState<string | null>(
+    urlError ? decodeURIComponent(urlError) : null
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!emailOrUsername || !password) {
-      setError("Please enter your email/username and password.");
+    if (!emailOrUsername.trim() || !password) {
+      setError("Please enter your email or username and password.");
       return;
     }
 
@@ -45,7 +57,7 @@ function LoginForm() {
           expiresIn?: number;
         };
       }>("/auth/login", {
-        emailOrUsername,
+        emailOrUsername: emailOrUsername.trim(),
         password,
       });
 
@@ -56,7 +68,7 @@ function LoginForm() {
         throw new Error("Invalid response from server.");
       }
     } catch (err: any) {
-      setError(err?.message || "Invalid credentials. Please try again.");
+      setError(err?.message || "Invalid credentials. Please verify your details.");
     } finally {
       setLoading(false);
     }
@@ -75,7 +87,11 @@ function LoginForm() {
       }>("/auth/guest");
 
       if (res?.data?.token) {
-        setGuestSession(res.data.token, res.data.user, res.data.user.expiresIn || 86400);
+        setGuestSession(
+          res.data.token,
+          res.data.user,
+          res.data.user.expiresIn || 86400
+        );
         router.push(redirectPath);
       } else {
         throw new Error("Failed to create guest session.");
@@ -88,19 +104,38 @@ function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md border-border/60 bg-card/80 backdrop-blur-xl shadow-2xl z-10">
-      <CardHeader className="space-y-1 pb-4">
-        <CardTitle className="text-lg font-bold">Sign In</CardTitle>
-        <CardDescription>Enter your account credentials to continue</CardDescription>
-      </CardHeader>
+    <div className="w-full max-w-md bg-white border-[3px] border-black rounded-[28px] p-6 sm:p-8 shadow-[6px_6px_0px_#000] relative z-10 transition-all">
+      {/* Card Header Badge & Title */}
+      <div className="text-center space-y-1.5 pb-5">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFE600] border-2 border-black text-[11px] font-black uppercase tracking-wider shadow-[1.5px_1.5px_0px_#000]">
+          <Flame className="w-3.5 h-3.5 fill-black text-black" />
+          <span>Welcome Back</span>
+        </div>
+        <h1 className="text-2xl font-black text-black tracking-tight pt-1">
+          Sign In to Quizzy
+        </h1>
+        <p className="text-xs font-bold text-stone-600">
+          Jump into live multiplayer quiz battles & track stats
+        </p>
+      </div>
 
-      <div className="px-6 pb-2">
-        {error && (
-          <div className="mb-4 p-3 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
-            {error}
-          </div>
-        )}
+      {/* Error notification banner */}
+      {error && (
+        <div className="mb-4 p-3 rounded-xl bg-red-100 border-2 border-black text-red-900 font-black text-xs shadow-[2px_2px_0px_#000] flex items-center justify-between gap-2">
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            className="text-stone-700 hover:text-black font-black text-sm px-1"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
+      {/* Quick 1-Click Access Buttons: Google + Guest Login */}
+      <div className="space-y-2.5 pb-4">
+        {/* Google Sign In Button */}
         <GoogleSignInButton
           label="Continue with Google"
           redirectPath={redirectPath}
@@ -108,140 +143,185 @@ function LoginForm() {
           disabled={loading || guestLoading}
         />
 
-        <div className="relative flex py-4 items-center">
-          <div className="flex-grow border-t border-border"></div>
-          <span className="flex-shrink mx-4 text-[11px] font-mono uppercase text-muted-foreground">OR EMAIL</span>
-          <div className="flex-grow border-t border-border"></div>
-        </div>
-      </div>
-
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4 pt-0">
-
-          <div className="space-y-2">
-            <label htmlFor="emailOrUsername" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">Email or Username</label>
-            <div className="relative">
-              <Input
-                id="emailOrUsername"
-                type="text"
-                placeholder="john@example.com or john_dev"
-                value={emailOrUsername}
-                onChange={(e) => setEmailOrUsername(e.target.value)}
-                className="pl-10"
-                required
-              />
-              <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex justify-between items-center">
-              <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">Password</label>
-            </div>
-            <div className="relative">
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="pl-10"
-                required
-              />
-              <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-            </div>
-          </div>
-
-          <Button
-            type="submit"
-            className="w-full h-10 font-semibold cursor-pointer"
-            disabled={loading || guestLoading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Authenticating...
-              </>
-            ) : (
-              <>
-                Log In
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </>
-            )}
-          </Button>
-        </CardContent>
-      </form>
-
-      <div className="px-6 py-2">
-        <div className="relative flex py-2 items-center">
-          <div className="flex-grow border-t border-border"></div>
-          <span className="flex-shrink mx-4 text-xs font-mono uppercase text-muted-foreground">OR</span>
-          <div className="flex-grow border-t border-border"></div>
-        </div>
-
-        <Button
+        {/* 1-Click Guest Login Button */}
+        <button
           type="button"
-          variant="outline"
-          className="w-full h-10 font-semibold border-amber-500/30 hover:bg-amber-500/10 text-amber-500 hover:text-amber-400 cursor-pointer transition-colors"
           onClick={handleGuestLogin}
           disabled={loading || guestLoading}
+          className="w-full h-11 bg-[#FFE600] hover:bg-[#FACC15] disabled:opacity-60 border-2 border-black rounded-xl font-black text-xs sm:text-sm text-black cursor-pointer transition-all flex items-center justify-center gap-2.5 shadow-[2px_2px_0px_#000] hover:shadow-[3px_3px_0px_#000] active:translate-x-[1px] active:translate-y-[1px]"
         >
           {guestLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Creating guest identity...
+              <Loader2 className="w-4 h-4 animate-spin text-black" />
+              <span>Creating Guest Identity...</span>
             </>
           ) : (
             <>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Continue as Guest
+              <Gamepad2 className="w-4 h-4 text-black" />
+              <span>Play as Guest (Instant)</span>
+              <Sparkles className="w-3.5 h-3.5 text-amber-700 fill-amber-500" />
             </>
           )}
-        </Button>
+        </button>
       </div>
 
-      <CardFooter className="flex justify-center pt-4 border-t border-border/40 text-xs text-muted-foreground">
-        Don't have an account?{" "}
-        <Link href="/register" className="ml-1 font-semibold text-primary hover:underline">
-          Sign up now
+      {/* Neo-brutalist Divider */}
+      <div className="relative flex py-3 items-center">
+        <div className="flex-grow border-t-2 border-black"></div>
+        <span className="flex-shrink mx-3 px-2 py-0.5 rounded-md bg-[#FAF7EE] border border-black text-[10px] font-black uppercase tracking-wider text-stone-600 shadow-[1px_1px_0px_#000]">
+          Or with Email
+        </span>
+        <div className="flex-grow border-t-2 border-black"></div>
+      </div>
+
+      {/* Native Credential Form */}
+      <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+        <div className="space-y-1.5 text-left">
+          <label
+            htmlFor="emailOrUsername"
+            className="text-[11px] font-black uppercase tracking-wider text-stone-800 block"
+          >
+            Email or Username
+          </label>
+          <div className="relative">
+            <input
+              id="emailOrUsername"
+              type="text"
+              autoComplete="username"
+              placeholder="e.g. alex@example.com or alex_dev"
+              value={emailOrUsername}
+              onChange={(e) => setEmailOrUsername(e.target.value)}
+              className="w-full h-11 pl-10 pr-3 rounded-xl bg-[#FAF7EE] border-2 border-black font-bold text-xs sm:text-sm text-black placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black shadow-[1.5px_1.5px_0px_#000]"
+              required
+            />
+            <UserIcon className="absolute left-3.5 top-3.5 h-4 w-4 text-stone-600" />
+          </div>
+        </div>
+
+        <div className="space-y-1.5 text-left">
+          <label
+            htmlFor="password"
+            className="text-[11px] font-black uppercase tracking-wider text-stone-800 block"
+          >
+            Password
+          </label>
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="current-password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full h-11 pl-10 pr-10 rounded-xl bg-[#FAF7EE] border-2 border-black font-bold text-xs sm:text-sm text-black placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black shadow-[1.5px_1.5px_0px_#000]"
+              required
+            />
+            <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-stone-600" />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-3 top-3 h-5 w-5 text-stone-500 hover:text-black flex items-center justify-center cursor-pointer"
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={loading || guestLoading}
+          className="w-full h-12 mt-2 bg-[#0D9488] hover:bg-[#0F766E] disabled:opacity-60 text-white border-2 border-black rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-[3px_3px_0px_#000] hover:shadow-[4px_4px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] transition-all"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <span>Authenticating...</span>
+            </>
+          ) : (
+            <>
+              <span>Log In to Quizzy</span>
+              <ArrowRight className="w-4 h-4 stroke-[3]" />
+            </>
+          )}
+        </button>
+      </form>
+
+      {/* Switch to Register */}
+      <div className="pt-6 border-t-2 border-black/10 mt-5 text-center text-xs font-bold text-stone-600">
+        New to Quizzy World?{" "}
+        <Link
+          href={`/register${redirectPath !== "/" ? `?redirect=${encodeURIComponent(redirectPath)}` : ""}`}
+          className="font-black text-black underline underline-offset-4 hover:text-[#0D9488] transition-colors"
+        >
+          Create free account →
         </Link>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }
 
 export default function LoginPage() {
   return (
-    <div className="min-h-[calc(100vh-12rem)] flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 bg-background relative overflow-hidden">
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-[calc(100vh-8rem)] w-full flex flex-col justify-center items-center py-10 px-4 sm:px-6 bg-[#FAF7EE] relative select-none overflow-hidden">
+      {/* Playful background decorative dots */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-25"
+        style={{
+          backgroundImage: "radial-gradient(#000 1.2px, transparent 1.2px)",
+          backgroundSize: "20px 20px",
+        }}
+      />
 
+      {/* Top Header Logo */}
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center z-10 mb-6">
-        <Link href="/" className="inline-flex items-center justify-center mb-4 group hover:scale-105 transition-transform" title="Back to Quizzy Home">
+        <Link
+          href="/"
+          className="inline-flex items-center justify-center mb-3 group hover:scale-105 transition-transform"
+          title="Back to Quizzy Home"
+        >
           <Image
             src="/quizzy-wordmark.svg"
-            alt="Quizzy"
-            width={144}
-            height={48}
+            alt="Quizzy World"
+            width={150}
+            height={50}
             priority
-            className="h-10 w-auto object-contain"
+            className="h-10 w-auto object-contain drop-shadow-[2px_2px_0px_rgba(0,0,0,0.8)]"
           />
         </Link>
-        <h2 className="text-2xl font-bold tracking-tight text-[#1d1b16]">
-          Welcome back to Quizzy
-        </h2>
-        <p className="mt-1 text-sm text-[#3f4944]">
-          Log in to jump into live trivia battles and track your progress
-        </p>
       </div>
 
-      <Suspense fallback={
-        <div className="p-8 text-center text-sm font-medium text-muted-foreground">
-          Loading authentication form...
-        </div>
-      }>
+      <Suspense
+        fallback={
+          <div className="w-full max-w-md bg-white border-[3px] border-black rounded-[28px] p-8 shadow-[6px_6px_0px_#000] text-center font-black text-stone-600">
+            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-black" />
+            Loading sign in form...
+          </div>
+        }
+      >
         <LoginForm />
       </Suspense>
+
+      {/* Trust pill features */}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-[11px] font-black text-stone-700 z-10">
+        <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000]">
+          <CheckCircle2 className="w-3.5 h-3.5 text-[#0D9488]" />
+          Instant PIN Join
+        </span>
+        <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000]">
+          <CheckCircle2 className="w-3.5 h-3.5 text-[#F59E0B]" />
+          Global Leaderboards
+        </span>
+        <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000]">
+          <CheckCircle2 className="w-3.5 h-3.5 text-[#DB2777]" />
+          100% Free to Play
+        </span>
+      </div>
     </div>
   );
 }

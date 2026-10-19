@@ -205,12 +205,12 @@ export function GoogleSignInButton({
         variant="outline"
         onClick={handleClick}
         disabled={loading || disabled}
-        className={`w-full h-10 font-semibold border-border hover:bg-secondary/60 text-foreground cursor-pointer transition-all flex items-center justify-center gap-2.5 shadow-sm ${className}`}
+        className={`w-full h-11 bg-white hover:bg-stone-50 border-2 border-black rounded-xl font-black text-xs sm:text-sm text-black cursor-pointer transition-all flex items-center justify-center gap-2.5 shadow-[2px_2px_0px_#000] hover:shadow-[3px_3px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] ${className}`}
       >
         {loading ? (
           <>
-            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-            <span>Signing in with Google...</span>
+            <Loader2 className="h-4 w-4 animate-spin text-black" />
+            <span>Connecting Google...</span>
           </>
         ) : (
           <>

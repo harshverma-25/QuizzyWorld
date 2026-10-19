@@ -1,37 +1,48 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { Shield, ArrowRight, Lock, Mail, User as UserIcon, Loader2, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  ArrowRight,
+  Lock,
+  Mail,
+  User as UserIcon,
+  Loader2,
+  Sparkles,
+  Gamepad2,
+  Eye,
+  EyeOff,
+  CheckCircle2,
+} from "lucide-react";
 import { useApiClient } from "@/hooks/useApiClient";
 import { setNativeSession } from "@/features/auth/nativeAuth";
 import { setGuestSession } from "@/features/auth/guestAuth";
 import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get("redirect") || "/";
   const api = useApiClient();
 
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [guestLoading, setGuestLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !username || !password) {
+    if (!email.trim() || !username.trim() || !password) {
       setError("Please fill in all required fields.");
       return;
     }
-    if (username.length < 3) {
+    if (username.trim().length < 3) {
       setError("Username must be at least 3 characters.");
       return;
     }
@@ -52,20 +63,23 @@ export default function RegisterPage() {
           expiresIn?: number;
         };
       }>("/auth/register", {
-        email,
-        username,
-        displayName: displayName || username,
+        email: email.trim().toLowerCase(),
+        username: username.trim(),
+        displayName: displayName.trim() || username.trim(),
         password,
       });
 
       if (res?.data?.accessToken) {
         setNativeSession(res.data.accessToken, res.data.user, res.data.expiresIn);
-        router.push("/");
+        router.push(redirectPath);
       } else {
         throw new Error("Invalid response from server.");
       }
     } catch (err: any) {
-      setError(err?.message || "Registration failed. Email or username may already be in use.");
+      setError(
+        err?.message ||
+          "Registration failed. That email or username may already be taken."
+      );
     } finally {
       setLoading(false);
     }
@@ -84,8 +98,12 @@ export default function RegisterPage() {
       }>("/auth/guest");
 
       if (res?.data?.token) {
-        setGuestSession(res.data.token, res.data.user, res.data.user.expiresIn || 86400);
-        router.push("/");
+        setGuestSession(
+          res.data.token,
+          res.data.user,
+          res.data.user.expiresIn || 86400
+        );
+        router.push(redirectPath);
       } else {
         throw new Error("Failed to create guest session.");
       }
@@ -97,174 +115,263 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-12rem)] flex flex-col justify-center items-center py-12 px-4 sm:px-6 lg:px-8 bg-background relative overflow-hidden">
-      {/* Background Decorator Gradients */}
-      <div className="absolute top-1/4 -right-32 w-96 h-96 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -left-32 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center z-10 mb-6">
-        <Link href="/" className="inline-flex items-center justify-center mb-4 group hover:scale-105 transition-transform" title="Back to Quizzy Home">
-          <Image
-            src="/quizzy-wordmark.svg"
-            alt="Quizzy"
-            width={144}
-            height={48}
-            priority
-            className="h-10 w-auto object-contain"
-          />
-        </Link>
-        <h2 className="text-2xl font-bold tracking-tight text-[#1d1b16]">
-          Create your Quizzy Account
-        </h2>
-        <p className="mt-1 text-sm text-[#3f4944]">
-          Join live 1–4 player quiz battles and test your speed & knowledge
+    <div className="w-full max-w-md bg-white border-[3px] border-black rounded-[28px] p-6 sm:p-8 shadow-[6px_6px_0px_#000] relative z-10 transition-all">
+      {/* Card Header Badge & Title */}
+      <div className="text-center space-y-1.5 pb-5">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#DCFCE7] border-2 border-black text-[11px] font-black uppercase tracking-wider text-[#15803D] shadow-[1.5px_1.5px_0px_#000]">
+          <Gamepad2 className="w-3.5 h-3.5" />
+          <span>Join the Arena</span>
+        </div>
+        <h1 className="text-2xl font-black text-black tracking-tight pt-1">
+          Create Quizzy Account
+        </h1>
+        <p className="text-xs font-bold text-stone-600">
+          Save your high scores, battle friends & build AI quizzes
         </p>
       </div>
 
-      <Card className="w-full max-w-md border-border/60 bg-card/80 backdrop-blur-xl shadow-2xl z-10">
-        <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-lg font-bold">Register</CardTitle>
-          <CardDescription>Enter your details to create a persistent profile</CardDescription>
-        </CardHeader>
-
-        <div className="px-6 pb-2">
-          {error && (
-            <div className="mb-4 p-3 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          <GoogleSignInButton
-            label="Sign up with Google"
-            redirectPath="/"
-            onError={(msg) => setError(msg)}
-            disabled={loading || guestLoading}
-          />
-
-          <div className="relative flex py-4 items-center">
-            <div className="flex-grow border-t border-border"></div>
-            <span className="flex-shrink mx-4 text-[11px] font-mono uppercase text-muted-foreground">OR EMAIL</span>
-            <div className="flex-grow border-t border-border"></div>
-          </div>
-        </div>
-
-        <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4 pt-0">
-
-            <div className="space-y-2">
-              <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">Email Address</label>
-              <div className="relative">
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="alex@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="username" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">Username</label>
-              <div className="relative">
-                <Input
-                  id="username"
-                  type="text"
-                  placeholder="alex_dev"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-                <UserIcon className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="displayName" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">Display Name (Optional)</label>
-              <Input
-                id="displayName"
-                type="text"
-                placeholder="Alex Rivers"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="password" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">Password</label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="At least 6 characters"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              className="w-full h-10 font-semibold cursor-pointer"
-              disabled={loading || guestLoading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating Account...
-                </>
-              ) : (
-                <>
-                  Create Account
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </form>
-
-        <div className="px-6 py-2">
-          <div className="relative flex py-2 items-center">
-            <div className="flex-grow border-t border-border"></div>
-            <span className="flex-shrink mx-4 text-xs font-mono uppercase text-muted-foreground">OR</span>
-            <div className="flex-grow border-t border-border"></div>
-          </div>
-
-          <Button
+      {/* Error notification banner */}
+      {error && (
+        <div className="mb-4 p-3 rounded-xl bg-red-100 border-2 border-black text-red-900 font-black text-xs shadow-[2px_2px_0px_#000] flex items-center justify-between gap-2">
+          <span>{error}</span>
+          <button
             type="button"
-            variant="outline"
-            className="w-full h-10 font-semibold border-amber-500/30 hover:bg-amber-500/10 text-amber-500 hover:text-amber-400 cursor-pointer transition-colors"
-            onClick={handleGuestLogin}
-            disabled={loading || guestLoading}
+            onClick={() => setError(null)}
+            className="text-stone-700 hover:text-black font-black text-sm px-1"
           >
-            {guestLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating guest identity...
-              </>
-            ) : (
-              <>
-                <Sparkles className="mr-2 h-4 w-4" />
-                Play Immediately as Guest
-              </>
-            )}
-          </Button>
+            ✕
+          </button>
+        </div>
+      )}
+
+      {/* Quick 1-Click Access Buttons: Google + Guest Login */}
+      <div className="space-y-2.5 pb-4">
+        {/* Google Sign In Button */}
+        <GoogleSignInButton
+          label="Sign up with Google"
+          redirectPath={redirectPath}
+          onError={(msg) => setError(msg)}
+          disabled={loading || guestLoading}
+        />
+
+        {/* 1-Click Guest Login Button */}
+        <button
+          type="button"
+          onClick={handleGuestLogin}
+          disabled={loading || guestLoading}
+          className="w-full h-11 bg-[#FFE600] hover:bg-[#FACC15] disabled:opacity-60 border-2 border-black rounded-xl font-black text-xs sm:text-sm text-black cursor-pointer transition-all flex items-center justify-center gap-2.5 shadow-[2px_2px_0px_#000] hover:shadow-[3px_3px_0px_#000] active:translate-x-[1px] active:translate-y-[1px]"
+        >
+          {guestLoading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin text-black" />
+              <span>Creating Guest Identity...</span>
+            </>
+          ) : (
+            <>
+              <Gamepad2 className="w-4 h-4 text-black" />
+              <span>Play as Guest (Instant)</span>
+              <Sparkles className="w-3.5 h-3.5 text-amber-700 fill-amber-500" />
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Neo-brutalist Divider */}
+      <div className="relative flex py-3 items-center">
+        <div className="flex-grow border-t-2 border-black"></div>
+        <span className="flex-shrink mx-3 px-2 py-0.5 rounded-md bg-[#FAF7EE] border border-black text-[10px] font-black uppercase tracking-wider text-stone-600 shadow-[1px_1px_0px_#000]">
+          Or with Email
+        </span>
+        <div className="flex-grow border-t-2 border-black"></div>
+      </div>
+
+      {/* Native Credential Form */}
+      <form onSubmit={handleSubmit} className="space-y-3.5 pt-1">
+        <div className="space-y-1 text-left">
+          <label
+            htmlFor="email"
+            className="text-[11px] font-black uppercase tracking-wider text-stone-800 block"
+          >
+            Email Address
+          </label>
+          <div className="relative">
+            <input
+              id="email"
+              type="email"
+              autoComplete="email"
+              placeholder="alex@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full h-11 pl-10 pr-3 rounded-xl bg-[#FAF7EE] border-2 border-black font-bold text-xs sm:text-sm text-black placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black shadow-[1.5px_1.5px_0px_#000]"
+              required
+            />
+            <Mail className="absolute left-3.5 top-3.5 h-4 w-4 text-stone-600" />
+          </div>
         </div>
 
-        <CardFooter className="flex justify-center pt-4 border-t border-border/40 text-xs text-muted-foreground">
-          Already have an account?{" "}
-          <Link href="/login" className="ml-1 font-semibold text-primary hover:underline">
-            Log in
-          </Link>
-        </CardFooter>
-      </Card>
+        <div className="space-y-1 text-left">
+          <label
+            htmlFor="username"
+            className="text-[11px] font-black uppercase tracking-wider text-stone-800 block"
+          >
+            Username
+          </label>
+          <div className="relative">
+            <input
+              id="username"
+              type="text"
+              autoComplete="username"
+              placeholder="e.g. alex_quizzer"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full h-11 pl-10 pr-3 rounded-xl bg-[#FAF7EE] border-2 border-black font-bold text-xs sm:text-sm text-black placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black shadow-[1.5px_1.5px_0px_#000]"
+              required
+            />
+            <UserIcon className="absolute left-3.5 top-3.5 h-4 w-4 text-stone-600" />
+          </div>
+        </div>
+
+        <div className="space-y-1 text-left">
+          <label
+            htmlFor="displayName"
+            className="text-[11px] font-black uppercase tracking-wider text-stone-800 block"
+          >
+            Display Name <span className="text-stone-400 font-semibold">(Optional)</span>
+          </label>
+          <input
+            id="displayName"
+            type="text"
+            placeholder="Alex Rivers"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            className="w-full h-11 px-3 rounded-xl bg-[#FAF7EE] border-2 border-black font-bold text-xs sm:text-sm text-black placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black shadow-[1.5px_1.5px_0px_#000]"
+          />
+        </div>
+
+        <div className="space-y-1 text-left">
+          <label
+            htmlFor="password"
+            className="text-[11px] font-black uppercase tracking-wider text-stone-800 block"
+          >
+            Password
+          </label>
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              placeholder="At least 6 characters"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full h-11 pl-10 pr-10 rounded-xl bg-[#FAF7EE] border-2 border-black font-bold text-xs sm:text-sm text-black placeholder:text-stone-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-black shadow-[1.5px_1.5px_0px_#000]"
+              required
+            />
+            <Lock className="absolute left-3.5 top-3.5 h-4 w-4 text-stone-600" />
+            <button
+              type="button"
+              onClick={() => setShowPassword((prev) => !prev)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute right-3 top-3 h-5 w-5 text-stone-500 hover:text-black flex items-center justify-center cursor-pointer"
+            >
+              {showPassword ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+            </button>
+          </div>
+        </div>
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={loading || guestLoading}
+          className="w-full h-12 mt-2 bg-[#FF4D85] hover:bg-[#F43F5E] disabled:opacity-60 text-white border-2 border-black rounded-xl font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer shadow-[3px_3px_0px_#000] hover:shadow-[4px_4px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] transition-all"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+              <span>Creating Account...</span>
+            </>
+          ) : (
+            <>
+              <span>Create Free Account</span>
+              <ArrowRight className="w-4 h-4 stroke-[3]" />
+            </>
+          )}
+        </button>
+      </form>
+
+      {/* Switch to Login */}
+      <div className="pt-6 border-t-2 border-black/10 mt-5 text-center text-xs font-bold text-stone-600">
+        Already have an account?{" "}
+        <Link
+          href={`/login${redirectPath !== "/" ? `?redirect=${encodeURIComponent(redirectPath)}` : ""}`}
+          className="font-black text-black underline underline-offset-4 hover:text-[#0D9488] transition-colors"
+        >
+          Sign in here →
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <div className="min-h-[calc(100vh-8rem)] w-full flex flex-col justify-center items-center py-10 px-4 sm:px-6 bg-[#FAF7EE] relative select-none overflow-hidden">
+      {/* Playful background decorative dots */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-25"
+        style={{
+          backgroundImage: "radial-gradient(#000 1.2px, transparent 1.2px)",
+          backgroundSize: "20px 20px",
+        }}
+      />
+
+      {/* Top Header Logo */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center z-10 mb-6">
+        <Link
+          href="/"
+          className="inline-flex items-center justify-center mb-3 group hover:scale-105 transition-transform"
+          title="Back to Quizzy Home"
+        >
+          <Image
+            src="/quizzy-wordmark.svg"
+            alt="Quizzy World"
+            width={150}
+            height={50}
+            priority
+            className="h-10 w-auto object-contain drop-shadow-[2px_2px_0px_rgba(0,0,0,0.8)]"
+          />
+        </Link>
+      </div>
+
+      <Suspense
+        fallback={
+          <div className="w-full max-w-md bg-white border-[3px] border-black rounded-[28px] p-8 shadow-[6px_6px_0px_#000] text-center font-black text-stone-600">
+            <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-black" />
+            Loading registration form...
+          </div>
+        }
+      >
+        <RegisterForm />
+      </Suspense>
+
+      {/* Trust pill features */}
+      <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-[11px] font-black text-stone-700 z-10">
+        <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000]">
+          <CheckCircle2 className="w-3.5 h-3.5 text-[#0D9488]" />
+          Instant PIN Join
+        </span>
+        <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000]">
+          <CheckCircle2 className="w-3.5 h-3.5 text-[#F59E0B]" />
+          Custom AI Quizzes
+        </span>
+        <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-lg border border-black shadow-[1px_1px_0px_#000]">
+          <CheckCircle2 className="w-3.5 h-3.5 text-[#DB2777]" />
+          100% Free Forever
+        </span>
+      </div>
     </div>
   );
 }

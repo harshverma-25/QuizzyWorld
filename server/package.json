@@ -15,10 +15,12 @@
     "test:guest": "tsx src/scripts/verify-guest-auth.ts",
     "test:task2-1": "tsx src/scripts/verify-task2-1.ts",
     "test:native-auth": "tsx src/scripts/verify-native-auth.ts",
+    "test:proxy-trust": "tsx src/scripts/verify-proxy-trust.ts",
     "reconcile:dry-run": "tsx src/scripts/reconcile-user-stats.ts",
     "reconcile:apply": "tsx src/scripts/reconcile-user-stats.ts --apply"
   },
   "dependencies": {
+    "@google/genai": "^2.30.0",
     "@socket.io/redis-adapter": "^8.3.0",
     "@upstash/redis": "^1.39.0",
     "cloudinary": "^2.11.0",
@@ -30,6 +32,7 @@
     "ioredis": "^6.0.0",
     "mongoose": "^8.5.1",
     "pino": "^9.3.2",
+    "razorpay": "^2.9.8",
     "socket.io": "^4.7.5",
     "zod": "^3.23.8"
   },
@@ -43,5 +46,9 @@
     "socket.io-client": "^4.8.4",
     "tsx": "^4.16.2",
     "typescript": "^5.5.3"
+  },
+  "overrides": {
+    "proxy-addr": "^2.0.8",
+    "engine.io": "^6.6.10"
   }
 }

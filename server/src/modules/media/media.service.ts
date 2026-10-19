@@ -6,6 +6,22 @@ import { buildThumbnailPrompt, ThumbnailPromptContext } from './thumbnail-prompt
 export class MediaService {
   private isCloudinaryConfigured: boolean = false;
   private isCloudflareAiConfigured: boolean = false;
+  private mockAiGenerator:
+    | ((subjectName: string, categoryName?: string, options?: any) => Promise<Buffer>)
+    | null = null;
+  private mockUploader:
+    | ((
+        input: string | Buffer,
+        options?: any
+      ) => Promise<{
+        url: string;
+        publicId: string;
+        format?: string;
+        bytes?: number;
+        width?: number;
+        height?: number;
+      }>)
+    | null = null;
 
   constructor() {
     // Configure Cloudinary with explicit credentials or URL
@@ -40,6 +56,36 @@ export class MediaService {
   }
 
   /**
+   * Set a mock image generator for deterministic testing without external API calls.
+   */
+  public setMockAiGenerator(
+    fn: ((subjectName: string, categoryName?: string, options?: any) => Promise<Buffer>) | null
+  ): void {
+    this.mockAiGenerator = fn;
+  }
+
+  /**
+   * Set a mock Cloudinary uploader for deterministic testing without external API calls.
+   */
+  public setMockUploader(
+    fn:
+      | ((
+          input: string | Buffer,
+          options?: any
+        ) => Promise<{
+          url: string;
+          publicId: string;
+          format?: string;
+          bytes?: number;
+          width?: number;
+          height?: number;
+        }>)
+      | null
+  ): void {
+    this.mockUploader = fn;
+  }
+
+  /**
    * Check configuration status
    */
   getStatus() {
@@ -51,16 +97,36 @@ export class MediaService {
   }
 
   /**
-   * Upload an image (base64 string, image URL, or Buffer) to Cloudinary with auto optimization
+   * Upload an image to Cloudinary and return full storage metadata.
    */
-  async uploadImage(
+  async uploadImageWithMetadata(
     input: string | Buffer,
     options: { folder?: string; publicId?: string } = {}
-  ): Promise<string> {
+  ): Promise<{
+    url: string;
+    publicId: string;
+    format?: string;
+    bytes?: number;
+    width?: number;
+    height?: number;
+    uploadedAt: string;
+  }> {
+    if (this.mockUploader) {
+      const mockRes = await this.mockUploader(input, options);
+      return {
+        ...mockRes,
+        uploadedAt: new Date().toISOString(),
+      };
+    }
+
     if (!this.isCloudinaryConfigured) {
       if (typeof input === 'string' && (input.startsWith('http://') || input.startsWith('https://'))) {
         logger.warn('Cloudinary not configured in .env. Falling back to original image URL directly.');
-        return input;
+        return {
+          url: input,
+          publicId: options.publicId || 'fallback_external',
+          uploadedAt: new Date().toISOString(),
+        };
       }
       throw new Error(
         'Cloudinary credentials are not configured in server .env. Please set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.'
@@ -79,13 +145,21 @@ export class MediaService {
     };
 
     if (Buffer.isBuffer(input)) {
-      return new Promise<string>((resolve, reject) => {
+      return new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(uploadOptions, (error, result) => {
           if (error || !result) {
             logger.error({ err: error }, 'Cloudinary buffer upload failed');
             return reject(new Error(error?.message || 'Failed to upload image buffer to Cloudinary'));
           }
-          resolve(result.secure_url);
+          resolve({
+            url: result.secure_url,
+            publicId: result.public_id,
+            format: result.format,
+            bytes: result.bytes,
+            width: result.width,
+            height: result.height,
+            uploadedAt: new Date().toISOString(),
+          });
         });
         stream.end(input);
       });
@@ -93,7 +167,26 @@ export class MediaService {
 
     // Input is a URL string or data:image base64 string
     const result: UploadApiResponse = await cloudinary.uploader.upload(input, uploadOptions);
-    return result.secure_url;
+    return {
+      url: result.secure_url,
+      publicId: result.public_id,
+      format: result.format,
+      bytes: result.bytes,
+      width: result.width,
+      height: result.height,
+      uploadedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Upload an image (base64 string, image URL, or Buffer) to Cloudinary with auto optimization
+   */
+  async uploadImage(
+    input: string | Buffer,
+    options: { folder?: string; publicId?: string } = {}
+  ): Promise<string> {
+    const res = await this.uploadImageWithMetadata(input, options);
+    return res.url;
   }
 
   /**
@@ -108,6 +201,10 @@ export class MediaService {
       sampleQuestionTopics?: string[];
     } = {}
   ): Promise<Buffer> {
+    if (this.mockAiGenerator) {
+      return this.mockAiGenerator(subjectName, categoryName, options);
+    }
+
     if (!env.CLOUDFLARE_ACCOUNT_ID || !env.CLOUDFLARE_API_TOKEN) {
       throw new Error(
         'Cloudflare Workers AI credentials missing in server .env. Please set CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN.'
@@ -128,70 +225,94 @@ export class MediaService {
     logger.info({ subjectName, categoryName, model, prompt }, 'Generating image with Cloudflare Workers AI...');
 
     const isMultipartModel = model.includes('flux-2') || model.includes('multipart');
-    let response: Response;
+    const maxAttempts = 2; // Bounded retry strategy
+    let lastError: any = null;
 
-    if (isMultipartModel) {
-      const formData = new FormData();
-      formData.append('prompt', prompt);
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 16000); // 16s timeout
 
-      response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-        },
-        body: formData,
-      });
-    } else {
-      // Standard JSON models (SDXL, SD-1.5, etc.)
-      response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          prompt,
-        }),
-      });
+      try {
+        let response: Response;
 
-      // If model returned 400 requiring multipart, retry with FormData transparently
-      if (!response.ok && response.status === 400) {
-        const cloned = response.clone();
-        const errJson: any = await cloned.json().catch(() => null);
-        if (errJson?.errors?.[0]?.message?.includes('multipart')) {
-          logger.info({ model }, 'Model requires multipart form data, retrying with FormData...');
-          const retryFormData = new FormData();
-          retryFormData.append('prompt', prompt);
+        if (isMultipartModel) {
+          const formData = new FormData();
+          formData.append('prompt', prompt);
+
           response = await fetch(url, {
             method: 'POST',
             headers: {
               Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
             },
-            body: retryFormData,
+            body: formData,
+            signal: controller.signal,
           });
+        } else {
+          // Standard JSON models (SDXL, Flux-1-schnell, etc.)
+          response = await fetch(url, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              prompt,
+            }),
+            signal: controller.signal,
+          });
+
+          // If model returned 400 requiring multipart, retry with FormData transparently
+          if (!response.ok && response.status === 400) {
+            const cloned = response.clone();
+            const errJson: any = await cloned.json().catch(() => null);
+            if (errJson?.errors?.[0]?.message?.includes('multipart')) {
+              logger.info({ model }, 'Model requires multipart form data, retrying with FormData...');
+              const retryFormData = new FormData();
+              retryFormData.append('prompt', prompt);
+              response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                  Authorization: `Bearer ${env.CLOUDFLARE_API_TOKEN}`,
+                },
+                body: retryFormData,
+                signal: controller.signal,
+              });
+            }
+          }
+        }
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          const errText = await response.text().catch(() => '');
+          logger.error({ status: response.status, errText, attempt }, 'Cloudflare Workers AI generation failed');
+          throw new Error(`Cloudflare AI error (${response.status}): ${errText || response.statusText}`);
+        }
+
+        const contentType = response.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const json: any = await response.json();
+          if (json.result?.image) {
+            return Buffer.from(json.result.image, 'base64');
+          }
+          if (typeof json.result === 'string') {
+            return Buffer.from(json.result, 'base64');
+          }
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        return Buffer.from(arrayBuffer);
+      } catch (err: any) {
+        clearTimeout(timeout);
+        lastError = err;
+        logger.warn({ attempt, err: err.message }, 'Cloudflare AI generation attempt failed');
+        if (attempt < maxAttempts) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
     }
 
-    if (!response.ok) {
-      const errText = await response.text().catch(() => '');
-      logger.error({ status: response.status, errText }, 'Cloudflare Workers AI generation failed');
-      throw new Error(`Cloudflare AI error (${response.status}): ${errText || response.statusText}`);
-    }
-
-    const contentType = response.headers.get('content-type') || '';
-    if (contentType.includes('application/json')) {
-      const json: any = await response.json();
-      if (json.result?.image) {
-        return Buffer.from(json.result.image, 'base64');
-      }
-      if (typeof json.result === 'string') {
-        return Buffer.from(json.result, 'base64');
-      }
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
+    throw lastError || new Error('Failed to generate image with Cloudflare Workers AI');
   }
 
   /**
@@ -206,13 +327,48 @@ export class MediaService {
       sampleQuestionTopics?: string[];
     } = {}
   ): Promise<string> {
+    const res = await this.generateAndUploadSubjectThumbnailWithMetadata(subjectName, categoryName, options);
+    return res.url;
+  }
+
+  /**
+   * End-to-end: Generate image with Cloudflare Workers AI and upload directly to Cloudinary, returning metadata.
+   */
+  async generateAndUploadSubjectThumbnailWithMetadata(
+    subjectName: string,
+    categoryName?: string,
+    options: {
+      categorySlug?: string;
+      description?: string;
+      sampleQuestionTopics?: string[];
+    } = {}
+  ): Promise<{
+    url: string;
+    publicId: string;
+    metadata: Record<string, any>;
+  }> {
     logger.info({ subjectName, categoryName }, 'Auto-generating thumbnail via Cloudflare AI and Cloudinary...');
     const imageBuffer = await this.generateSubjectImage(subjectName, categoryName, options);
     const sanitizedSlug = subjectName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-    return this.uploadImage(imageBuffer, {
+    const uploadRes = await this.uploadImageWithMetadata(imageBuffer, {
       folder: 'quizzy/thumbnails',
       publicId: `thumb-${sanitizedSlug}-${Date.now()}`,
     });
+
+    return {
+      url: uploadRes.url,
+      publicId: uploadRes.publicId,
+      metadata: {
+        provider: 'cloudflare-ai',
+        model: env.CLOUDFLARE_AI_MODEL || '@cf/stabilityai/stable-diffusion-xl-base-1.0',
+        publicId: uploadRes.publicId,
+        bytes: uploadRes.bytes,
+        format: uploadRes.format,
+        width: uploadRes.width,
+        height: uploadRes.height,
+        generatedAt: uploadRes.uploadedAt,
+      },
+    };
   }
 }
 

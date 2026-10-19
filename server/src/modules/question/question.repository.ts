@@ -40,9 +40,14 @@ export class QuestionRepository {
 
     if (categoryDoc) {
       query.categoryId = categoryDoc._id;
+    } else if (subjectDoc && (subjectDoc as any).categoryId) {
+      query.categoryId = (subjectDoc as any).categoryId;
     }
+
     if (subjectDoc && !filter.isMixedCategory) {
       query.subjectId = subjectDoc._id;
+    } else if (filter.subjectId && Types.ObjectId.isValid(filter.subjectId) && !filter.isMixedCategory) {
+      query.subjectId = new Types.ObjectId(filter.subjectId);
     }
 
     // If neither categoryId nor subjectId could be resolved, fallback to legacy topic query

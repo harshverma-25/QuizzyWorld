@@ -1,5 +1,6 @@
 import { CategoryModel, SubjectModel } from './category.model.js';
 import { ICategoryDocument, ISubjectDocument } from './category.types.js';
+import { UserQuizModel } from '../quiz/quiz.model.js';
 import { Types } from 'mongoose';
 
 export class CategoryRepository {
@@ -40,7 +41,34 @@ export class CategoryRepository {
       const byId = await SubjectModel.findOne({ _id: idOrSlug, isActive: true });
       if (byId) return byId;
     }
-    return SubjectModel.findOne({ slug: idOrSlug.toLowerCase(), isActive: true });
+    const bySlug = await SubjectModel.findOne({ slug: idOrSlug.toLowerCase(), isActive: true });
+    if (bySlug) return bySlug;
+
+    // Fallback: check if idOrSlug corresponds to a published, public user quiz (_id or shareId)
+    const isObjectId = Types.ObjectId.isValid(idOrSlug);
+    const userQuiz = await UserQuizModel.findOne({
+      $or: [
+        ...(isObjectId ? [{ _id: new Types.ObjectId(idOrSlug) }] : []),
+        { shareId: idOrSlug },
+      ],
+      isPublished: true,
+      isPrivate: false,
+    });
+
+    if (userQuiz) {
+      return {
+        _id: userQuiz._id,
+        name: userQuiz.title || userQuiz.topic,
+        slug: userQuiz._id.toString(),
+        categoryId: userQuiz.categoryId,
+        description: userQuiz.description,
+        thumbnailUrl: userQuiz.thumbnailUrl,
+        isActive: true,
+        playedCount: userQuiz.playedCount || 0,
+      } as any;
+    }
+
+    return null;
   }
 
   /**

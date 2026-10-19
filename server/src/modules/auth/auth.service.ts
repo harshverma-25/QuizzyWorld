@@ -43,7 +43,7 @@ export class AuthService {
       throw new ApiError(409, 'Username is already taken');
     }
 
-    const passwordHash = hashPassword(password);
+    const passwordHash = await hashPassword(password);
     const avatar = generateLocalSvgAvatar(username);
 
     const user = await userRepository.create({
@@ -121,7 +121,7 @@ export class AuthService {
       throw new ApiError(401, 'Invalid email/username or password');
     }
 
-    const isValid = verifyPassword(password, user.passwordHash);
+    const isValid = await verifyPassword(password, user.passwordHash);
     if (!isValid) {
       throw new ApiError(401, 'Invalid email/username or password');
     }

@@ -55,6 +55,8 @@ export interface Subject {
   thumbnailUrl?: string;
   rating?: number;
   creator?: string;
+  isUserCreated?: boolean;
+  shareId?: string;
 }
 
 export interface PopularQuiz {

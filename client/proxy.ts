@@ -9,6 +9,7 @@ const PROTECTED_PREFIXES = [
   "/leaderboard",
   "/history",
   "/results",
+  "/create",
 ];
 
 const AUTH_PREFIXES = ["/login", "/register"];

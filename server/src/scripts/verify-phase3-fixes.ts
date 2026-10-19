@@ -82,7 +82,7 @@ async function runPhase3Verification() {
         email: adminEmail,
         username: 'phase3_admin',
         displayName: 'Phase 3 Admin',
-        passwordHash: hashPassword('admin123456'),
+        passwordHash: await hashPassword('admin123456'),
         role: 'admin',
         isGuest: false,
       });
@@ -98,7 +98,7 @@ async function runPhase3Verification() {
         email: normalEmail,
         username: 'phase3_normal',
         displayName: 'Phase 3 Normal User',
-        passwordHash: hashPassword('user123456'),
+        passwordHash: await hashPassword('user123456'),
         role: 'user',
         isGuest: false,
       });

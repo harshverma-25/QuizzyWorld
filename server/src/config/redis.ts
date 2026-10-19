@@ -3,13 +3,25 @@ import { env } from './env.js';
 import { logger } from './logger.js';
 
 let redisInstance: Redis | null = null;
+let customRedisClient: any = null;
 let isConfigured = false;
+
+/**
+ * Injects a custom or mock Redis client (useful for unit testing multi-instance scenarios).
+ */
+export function setCustomRedisClient(client: any): void {
+  customRedisClient = client;
+}
 
 /**
  * Initializes and returns the singleton Upstash Redis client.
  * Safe against missing credentials or initialization failures — will never crash the server.
  */
 export function getRedisClient(): Redis | null {
+  if (customRedisClient !== null) {
+    return customRedisClient;
+  }
+
   if (redisInstance !== null) {
     return redisInstance;
   }

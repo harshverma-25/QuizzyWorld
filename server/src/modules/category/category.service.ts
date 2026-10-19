@@ -6,6 +6,7 @@ import { getAvailableQuizLengths } from '../../shared/config/quiz-config.js';
 import { BattleModel } from '../battle/battle.model.js';
 import { BattleStatus } from '../battle/battle.types.js';
 import { cacheService } from '../../shared/cache/cache.service.js';
+import { UserQuizModel } from '../quiz/quiz.model.js';
 
 export class CategoryService {
   private readonly TTL_CATEGORIES = 300; // 5 minutes
@@ -66,9 +67,10 @@ export class CategoryService {
   }> {
     const cacheKey = 'categories:home-summary';
     return cacheService.getOrSet(cacheKey, this.TTL_CATEGORIES, async () => {
-      const [categories, allSubjects, popularQuizzes, categoryCounts, subjectCounts] = await Promise.all([
+      const [categories, allSubjects, userQuizzes, popularQuizzes, categoryCounts, subjectCounts] = await Promise.all([
         this.repository.findAllActiveCategories(),
         this.repository.findAllActiveSubjects(),
+        UserQuizModel.find({ isPublished: true, isPrivate: false }).sort({ playedCount: -1, createdAt: -1 }),
         this.getPopularQuizzes(6),
         questionRepository.countPublishedGroupedByCategory(),
         questionRepository.countPublishedGroupedByAllSubjects(),
@@ -118,9 +120,41 @@ export class CategoryService {
         };
       });
 
+      const enrichedUserQuizzes = userQuizzes.map((quiz) => {
+        const cat = categoryMap.get(quiz.categoryId?.toString() || '');
+        const questionCount = subjectCounts.get(quiz._id.toString()) || (quiz.questions ? quiz.questions.length : 0);
+        const availableLengths = getAvailableQuizLengths(questionCount);
+        return {
+          _id: quiz._id.toString(),
+          id: quiz._id.toString(),
+          categoryId: quiz.categoryId?.toString() || '',
+          categorySlug: cat?.slug || quiz.categorySlug || '',
+          categoryName: cat?.name || quiz.categoryName || '',
+          name: quiz.title || quiz.topic,
+          slug: quiz._id.toString(),
+          shareId: quiz.shareId,
+          description: quiz.description || '',
+          icon: 'Sparkles',
+          thumbnailUrl: quiz.thumbnailUrl || '',
+          isActive: true,
+          isUserCreated: true,
+          creatorName: quiz.creatorName,
+          playedCount: quiz.playedCount || 0,
+          questionCount,
+          availableLengths,
+          isPlayable: questionCount >= 10,
+        };
+      });
+
+      const existingIds = new Set(enrichedSubjects.map((s) => s.id));
+      const combinedSubjects = [
+        ...enrichedSubjects,
+        ...enrichedUserQuizzes.filter((uq) => !existingIds.has(uq.id)),
+      ];
+
       return {
         categories: enrichedCategories,
-        subjects: enrichedSubjects,
+        subjects: combinedSubjects,
         popularQuizzes,
       };
     });
@@ -140,13 +174,22 @@ export class CategoryService {
   /**
    * Retrieve category and all active subjects belonging to it with question counts and availability metrics.
    * Completely eliminates N+1 queries via single-pass subject question count aggregation and TTL caching.
+   * Includes both seeded subjects and published public user-created quizzes for this category.
    */
   async getSubjectsForCategory(categoryIdOrSlug: string): Promise<{ category: any; subjects: any[] }> {
     const key = `categories:subjects:${categoryIdOrSlug.toLowerCase()}`;
     return cacheService.getOrSet(key, this.TTL_SUBJECTS, async () => {
       const category = await this.getCategory(categoryIdOrSlug);
-      const [subjects, { subjectCounts, totalCategoryCount }] = await Promise.all([
+      const [subjects, userQuizzes, { subjectCounts, totalCategoryCount }] = await Promise.all([
         this.repository.findSubjectsByCategoryIdOrSlug(category.slug),
+        UserQuizModel.find({
+          $or: [
+            { categoryId: category._id },
+            { categorySlug: category.slug.toLowerCase() },
+          ],
+          isPublished: true,
+          isPrivate: false,
+        }).sort({ playedCount: -1, createdAt: -1 }),
         questionRepository.countPublishedGroupedBySubject(category._id),
       ]);
 
@@ -172,6 +215,37 @@ export class CategoryService {
         };
       });
 
+      const userQuizzesWithCount = userQuizzes.map((quiz) => {
+        const questionCount = subjectCounts.get(quiz._id.toString()) || (quiz.questions ? quiz.questions.length : 0);
+        const availableLengths = getAvailableQuizLengths(questionCount);
+        return {
+          _id: quiz._id.toString(),
+          id: quiz._id.toString(),
+          categoryId: category._id.toString(),
+          categorySlug: category.slug,
+          categoryName: category.name,
+          name: quiz.title || quiz.topic,
+          slug: quiz._id.toString(),
+          shareId: quiz.shareId,
+          description: quiz.description || `20-question AI quiz on ${quiz.topic || quiz.title}`,
+          icon: 'Sparkles',
+          thumbnailUrl: quiz.thumbnailUrl || '',
+          isActive: true,
+          isUserCreated: true,
+          creatorName: quiz.creatorName,
+          playedCount: quiz.playedCount || 0,
+          questionCount,
+          availableLengths,
+          isPlayable: questionCount >= 10,
+        };
+      });
+
+      const existingIds = new Set(subjectsWithCount.map((s) => s.id));
+      const combinedSubjects = [
+        ...subjectsWithCount,
+        ...userQuizzesWithCount.filter((uq) => !existingIds.has(uq.id)),
+      ];
+
       const result = {
         category: {
           _id: category._id.toString(),
@@ -186,7 +260,7 @@ export class CategoryService {
           availableLengths: categoryAvailableLengths,
           isPlayable: totalCategoryCount >= 10,
         },
-        subjects: subjectsWithCount,
+        subjects: combinedSubjects,
       };
 
       // Prime secondary keys for alternate lookups (by slug and id)

@@ -21,7 +21,7 @@ export async function seedAdminUser() {
   if (user) {
     user.role = 'admin';
     user.displayName = user.displayName || 'QUIZZY Admin';
-    user.passwordHash = hashPassword(adminPassword);
+    user.passwordHash = await hashPassword(adminPassword);
     await user.save();
     console.log(`✅ Existing user updated to ADMIN: ${user.email} (${user.username})`);
   } else {
@@ -29,7 +29,7 @@ export async function seedAdminUser() {
       email: adminEmail,
       username: adminUsername,
       displayName: 'QUIZZY Admin',
-      passwordHash: hashPassword(adminPassword),
+      passwordHash: await hashPassword(adminPassword),
       avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=quizzy_admin`,
       isGuest: false,
       role: 'admin',

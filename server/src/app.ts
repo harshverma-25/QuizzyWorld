@@ -16,6 +16,8 @@ import { categoryRoutes } from './modules/category/category.routes.js';
 import { leaderboardRoutes } from './modules/leaderboard/leaderboard.routes.js';
 import { docsRoutes } from './modules/docs/docs.routes.js';
 import { adminRoutes } from './modules/admin/admin.routes.js';
+import { quizRoutes } from './modules/quiz/quiz.routes.js';
+import { paymentRoutes } from './modules/payment/payment.routes.js';
 
 import mongoose from 'mongoose';
 import { rateLimiter } from './middleware/rate-limiter.middleware.js';
@@ -70,11 +72,19 @@ app.use(cors({
 // Parse Cookie headers for HttpOnly auth tokens
 app.use(cookieParser());
 
-// Parse incoming JSON payloads with safe bounded limits to mitigate memory exhaustion
-app.use(express.json({ limit: '100kb' }));
+// Parse incoming JSON payloads with safe bounded limits (10MB for base64 thumbnail uploads)
+// Capture rawBody buffer for Razorpay webhook signature verification
+app.use(
+  express.json({
+    limit: '10mb',
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 
 // Parse URL-encoded payloads
-app.use(express.urlencoded({ extended: true, limit: '100kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Request logging middleware
 app.use(requestLogger);
@@ -139,6 +149,8 @@ app.use('/api/v1/battles', battleRoutes);
 app.use('/api/v1/matches', battleRoutes);
 app.use('/api/v1/history', historyRoutes);
 app.use('/api/v1/admin', adminRoutes);
+app.use('/api/v1/quizzes', quizRoutes);
+app.use('/api/v1/payments', paymentRoutes);
 app.use('/api', docsRoutes);
 
 // Unmatched route handler (404)

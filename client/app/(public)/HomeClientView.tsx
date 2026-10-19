@@ -16,6 +16,12 @@ import {
   Film,
   Trophy,
   LayoutGrid,
+  Sparkles,
+  Crown,
+  Layers,
+  Edit3,
+  Image as ImageIcon,
+  CheckCircle2,
 } from "lucide-react";
 
 import {
@@ -558,6 +564,15 @@ export default function HomeClientView({
     router.push(`/lobby/${cleanPin}`);
   };
 
+  // Handle "Create Quiz with AI" CTA navigation
+  const handleCreateQuizClick = () => {
+    if (isUserAuthenticated) {
+      router.push("/create");
+    } else {
+      router.push("/login?redirect=%2Fcreate");
+    }
+  };
+
 
   // Launch Solo Quiz Session
   const handlePlaySolo = async (quiz: {
@@ -810,6 +825,117 @@ export default function HomeClientView({
                 {heroPinError}
               </span>
             )}
+          </div>
+        </section>
+
+        {/* ========================================================================= */}
+        {/* 1.5. CREATE YOUR OWN QUIZ WITH AI (PROMOTIONAL NEO-BRUTALIST SECTION) */}
+        {/* ========================================================================= */}
+        <section
+          aria-labelledby="ai-quiz-promo-heading"
+          className="w-full relative overflow-hidden bg-gradient-to-br from-[#FEF9C3] via-[#FAF7EE] to-[#EDE9FE] border-[2.5px] border-black rounded-[24px] sm:rounded-[28px] p-4.5 sm:p-6 lg:p-7 shadow-[4px_4px_0px_#000]"
+        >
+          {/* Subtle Decorative Background Dots */}
+          <div
+            className="absolute inset-0 pointer-events-none opacity-20"
+            style={{
+              backgroundImage: "radial-gradient(#000 1px, transparent 1px)",
+              backgroundSize: "16px 16px",
+            }}
+          />
+
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+            {/* Left Content Column (Heading, Details, Feature Indicators, Quota, CTA) */}
+            <div className="lg:col-span-7 xl:col-span-8 flex flex-col items-start gap-4">
+
+              {/* Heading & Description */}
+              <div>
+                <h2
+                  id="ai-quiz-promo-heading"
+                  className="text-xl sm:text-2xl md:text-3xl font-black text-black tracking-tight leading-tight"
+                >
+                  Your Ideas. Your Quiz.
+                </h2>
+                <p className="text-xs sm:text-sm font-bold text-stone-700 mt-1.5 max-w-xl leading-relaxed">
+                  Generate an instant quiz from your chosen category and topic. Tweak questions to your liking, get an instant cover thumbnail, and launch into solo or multiplayer challenges.
+                </p>
+              </div>
+
+              {/* 4 Feature Indicators */}
+              <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border-2 border-black text-xs font-black text-black shadow-[1.5px_1.5px_0px_#000]">
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-[#0D9488]" />
+                  <span>Easy / Medium / Hard</span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border-2 border-black text-xs font-black text-black shadow-[1.5px_1.5px_0px_#000]">
+                  <Edit3 className="w-3.5 h-3.5 text-[#EA580C]" />
+                  <span>Editable Questions</span>
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-white border-2 border-black text-xs font-black text-black shadow-[1.5px_1.5px_0px_#000]">
+                  <ImageIcon className="w-3.5 h-3.5 text-[#DB2777]" />
+                  <span>AI-Generated Thumbnail</span>
+                </div>
+              </div>
+
+             
+              {/* Prominent CTA Button */}
+              <div className="pt-2 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={handleCreateQuizClick}
+                  className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#FFE600] hover:bg-[#FACC15] text-black font-black text-sm uppercase tracking-wider border-2 border-black shadow-[3px_3px_0px_#000] hover:shadow-[4px_4px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] transition-all flex items-center justify-center gap-2.5 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black"
+                >
+                  <Sparkles className="w-4 h-4 fill-black" />
+                  <span>Create Quiz with AI</span>
+                  <ArrowRight className="w-4 h-4 stroke-[3]" />
+                </button>
+              </div>
+            </div>
+
+            {/* Right Neo-Brutalist Visual Card Mockup (Visible on sm and up) */}
+            <div className="lg:col-span-5 xl:col-span-4 hidden sm:block">
+              <div className="relative mx-auto max-w-sm rounded-[22px] bg-white border-[2.5px] border-black p-4 shadow-[4px_4px_0px_#000] rotate-1 hover:rotate-0 transition-transform">
+                {/* Mock Card Header */}
+                <div className="flex items-center justify-between pb-3 border-b-2 border-black mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-[#CCFBF1] border-2 border-black flex items-center justify-center">
+                      <ArcadeBrainIcon className="w-4 h-4 text-[#0D9488]" />
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-wide text-black">
+                      AI Generated Quiz
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-black bg-[#DCFCE7] text-[#15803D] px-2 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_#000]">
+                    20 Questions
+                  </span>
+                </div>
+
+                {/* Mock Quiz Topic Body */}
+                <div className="space-y-2.5">
+                  <div className="p-2.5 rounded-xl bg-[#FAF7EE] border-2 border-black">
+                    <div className="text-[10px] font-black uppercase text-stone-500">Selected Topic</div>
+                    <div className="text-xs font-black text-black">Quantum Physics & Black Holes</div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 text-center">
+                    <div className="p-2 rounded-lg bg-[#EDE9FE] border-2 border-black">
+                      <div className="text-[9px] font-black uppercase text-stone-500">Difficulty</div>
+                      <div className="text-[11px] font-black text-[#6D28D9]">Easy • Med • Hard</div>
+                    </div>
+                    <div className="p-2 rounded-lg bg-[#FFE4E6] border-2 border-black">
+                      <div className="text-[9px] font-black uppercase text-stone-500">Thumbnail</div>
+                      <div className="text-[11px] font-black text-[#BE123C]">AI Cover Art ✨</div>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-[#DCFCE7] border-2 border-black flex items-center justify-between">
+                    <span className="text-[11px] font-black text-black">Ready to Edit & Play</span>
+                    <span className="text-xs font-black">⚡ Instant</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
 

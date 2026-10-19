@@ -25,7 +25,7 @@ async function runVerification() {
       email: adminEmail,
       username: 'test_admin',
       displayName: 'Test Admin',
-      passwordHash: hashPassword('admin123456'),
+      passwordHash: await hashPassword('admin123456'),
       role: 'admin',
       isGuest: false,
     });
@@ -42,7 +42,7 @@ async function runVerification() {
       email: normalEmail,
       username: 'normal_user',
       displayName: 'Normal User',
-      passwordHash: hashPassword('user123456'),
+      passwordHash: await hashPassword('user123456'),
       role: 'user',
       isGuest: false,
     });

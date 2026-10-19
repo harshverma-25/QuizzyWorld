@@ -12,6 +12,8 @@ export default function robots(): MetadataRoute.Robots {
           "/",
           "/categories",
           "/categories/",
+          "/create",
+          "/create/",
           "/images/",
           "/quizzy-favicon.svg",
           "/quizzy-wordmark.svg",

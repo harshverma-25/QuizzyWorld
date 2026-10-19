@@ -773,6 +773,42 @@ export default function HomeClientView({
         )}
 
         {/* ========================================================================= */}
+        {/* SEO HERO TITLE & BRAND HEADING (CRITICAL FOR GOOGLE RANKING) */}
+        {/* ========================================================================= */}
+        <header className="w-full pt-1 pb-1 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1.5 max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FFE600] border-2 border-black font-black text-[11px] sm:text-xs uppercase tracking-wider shadow-[2px_2px_0px_#000]">
+              <Flame className="w-3.5 h-3.5 text-black fill-black" />
+              <span>#1 Real-Time Multiplayer Quiz Game & Battle Arena</span>
+            </div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-black tracking-tight leading-tight">
+              Quizzy World — Online Quiz Game & Live Quiz Battles
+            </h1>
+            <p className="text-xs sm:text-sm font-bold text-stone-600 leading-relaxed">
+              Step into <strong className="text-black font-black">Quizzy World</strong>! Compete in fast-paced real-time quiz battles, challenge friends with a 6-digit room PIN, test your knowledge across thousands of trivia questions, or build custom quizzes with AI.
+            </p>
+          </div>
+
+          <div className="hidden lg:flex items-center gap-2 shrink-0">
+            <Link
+              href="/categories"
+              className="px-4 py-2 rounded-xl bg-white hover:bg-stone-50 border-2 border-black font-black text-xs text-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] transition-all flex items-center gap-1.5"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Browse All Topics</span>
+            </Link>
+            <button
+              type="button"
+              onClick={handleCreateQuizClick}
+              className="px-4 py-2 rounded-xl bg-[#FFE600] hover:bg-[#FACC15] border-2 border-black font-black text-xs text-black shadow-[2px_2px_0px_#000] active:translate-x-[1px] active:translate-y-[1px] transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5 fill-black" />
+              <span>AI Quiz Creator</span>
+            </button>
+          </div>
+        </header>
+
+        {/* ========================================================================= */}
         {/* 1. JOIN ROOM WITH PIN (SLEEK RETRO-ARCADE THEME) */}
         {/* ========================================================================= */}
         <section className="w-full bg-white border-[2.5px] border-black rounded-[22px] sm:rounded-[26px] p-3.5 sm:px-6 sm:py-3.5 shadow-[4px_4px_0px_#000] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -1208,6 +1244,104 @@ export default function HomeClientView({
                 onPlay={handlePlayQuiz}
               />
             ))}
+            {/* ========================================================================= */}
+            {/* 5. ABOUT QUIZZY WORLD & FAQS (HIGH-IMPACT ON-PAGE SEO & RICH SNIPPETS) */}
+            {/* ========================================================================= */}
+            <section
+              aria-labelledby="seo-about-quizzy-world"
+              className="w-full bg-white border-[2.5px] border-black rounded-[24px] sm:rounded-[28px] p-5 sm:p-8 shadow-[4px_4px_0px_#000] space-y-6 mt-8"
+            >
+              <div className="space-y-2 border-b-2 border-black pb-4">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#CCFBF1] border-2 border-black font-black text-xs uppercase tracking-wider shadow-[1.5px_1.5px_0px_#000]">
+                  <Sparkles className="w-3.5 h-3.5 text-[#0D9488]" />
+                  <span>The Quiz Arena</span>
+                </div>
+                <h2
+                  id="seo-about-quizzy-world"
+                  className="text-xl sm:text-2xl lg:text-3xl font-black text-black tracking-tight"
+                >
+                  About Quizzy World: The Premier Online Quiz Game & Quiz Battles
+                </h2>
+                <p className="text-xs sm:text-sm font-bold text-stone-600 leading-relaxed max-w-4xl">
+                  <strong>Quizzy World</strong> is an interactive web-based quiz game and real-time multiplayer battle arena built for learners, trivia enthusiasts, and competitive gamers. Play solo to test your knowledge or host live quiz battles with friends using simple 6-digit room PINs.
+                </p>
+              </div>
+
+              {/* 3 Pillar Features */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 rounded-2xl bg-[#EDE9FE] border-2 border-black shadow-[3px_3px_0px_#000] space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-white border-2 border-black flex items-center justify-center shadow-[1.5px_1.5px_0px_#000]">
+                    <Gamepad2 className="w-5 h-5 text-[#7C3AED]" />
+                  </div>
+                  <h3 className="font-black text-base text-black">Live Quiz Battles</h3>
+                  <p className="text-xs font-bold text-stone-700 leading-relaxed">
+                    Host or join synchronized multiplayer quiz battles in real time. Dynamic countdown timers and speed-scoring reward quick, accurate answers on live leaderboards.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#DCFCE7] border-2 border-black shadow-[3px_3px_0px_#000] space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-white border-2 border-black flex items-center justify-center shadow-[1.5px_1.5px_0px_#000]">
+                    <Play className="w-5 h-5 text-[#15803D] fill-[#15803D]" />
+                  </div>
+                  <h3 className="font-black text-base text-black">Solo Practice Drills</h3>
+                  <p className="text-xs font-bold text-stone-700 leading-relaxed">
+                    Master essential concepts across computer science, aptitude, mathematics, science, and general knowledge with immediate answer explanations and progress analytics.
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-[#FEF9C3] border-2 border-black shadow-[3px_3px_0px_#000] space-y-2">
+                  <div className="w-10 h-10 rounded-xl bg-white border-2 border-black flex items-center justify-center shadow-[1.5px_1.5px_0px_#000]">
+                    <Sparkles className="w-5 h-5 text-[#B45309]" />
+                  </div>
+                  <h3 className="font-black text-base text-black">AI Quiz Generator</h3>
+                  <p className="text-xs font-bold text-stone-700 leading-relaxed">
+                    Create a customized 20-question quiz on any topic in seconds with Gemini AI. Edit questions, customize options, choose AI cover art, and publish to the community.
+                  </p>
+                </div>
+              </div>
+
+              {/* Frequently Asked Questions */}
+              <div className="space-y-3 pt-2">
+                <h3 className="text-lg font-black text-black">Frequently Asked Questions</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-left">
+                  <div className="p-3.5 rounded-xl bg-[#FAF7EE] border-2 border-black">
+                    <h4 className="font-black text-xs sm:text-sm text-black mb-1">
+                      How do I join a quiz battle with friends?
+                    </h4>
+                    <p className="text-xs font-bold text-stone-600 leading-relaxed">
+                      Enter the 6-digit room PIN shared by your host into the "Join a Room" bar at the top of the page. You will immediately enter the live multiplayer lobby.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-[#FAF7EE] border-2 border-black">
+                    <h4 className="font-black text-xs sm:text-sm text-black mb-1">
+                      Do I need to create an account to play?
+                    </h4>
+                    <p className="text-xs font-bold text-stone-600 leading-relaxed">
+                      No! Quizzy World supports guest play. You can pick an avatar and display name and jump right into quiz games without signing up.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-[#FAF7EE] border-2 border-black">
+                    <h4 className="font-black text-xs sm:text-sm text-black mb-1">
+                      Can I create my own quiz questions?
+                    </h4>
+                    <p className="text-xs font-bold text-stone-600 leading-relaxed">
+                      Yes! Use our AI Quiz Creator to generate full quizzes on any topic, edit questions, and publish them for solo or multiplayer challenges.
+                    </p>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-[#FAF7EE] border-2 border-black">
+                    <h4 className="font-black text-xs sm:text-sm text-black mb-1">
+                      What categories are available on Quizzy World?
+                    </h4>
+                    <p className="text-xs font-bold text-stone-600 leading-relaxed">
+                      We offer tracks in Programming (DSA, Web Dev, Python, JS), Aptitude & Reasoning, Natural Sciences (Physics, Chemistry, Biology), and General Knowledge.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </section>
           </>
         )}
 

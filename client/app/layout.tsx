@@ -25,10 +25,11 @@ export const metadata: Metadata = {
   description: siteConfig.defaultDescription,
   applicationName: siteConfig.name,
   keywords: siteConfig.keywords,
-  authors: [{ name: "QUIZZY" }],
-  creator: "QUIZZY",
-  publisher: "QUIZZY",
-  category: "education",
+  authors: [{ name: "Quizzy World", url: siteConfig.url }],
+  creator: "Quizzy World",
+  publisher: "Quizzy World",
+  category: "games",
+  classification: "Online Quiz Game & Real-Time Quiz Battles",
   alternates: {
     canonical: siteConfig.url,
   },
@@ -44,7 +45,7 @@ export const metadata: Metadata = {
         url: "/images/quizzy-hero-logo.jpg",
         width: 600,
         height: 338,
-        alt: "QUIZZY — Real-Time Multiplayer Quiz Arena",
+        alt: "Quizzy World — Real-Time Multiplayer Quiz Game & Quiz Battles",
       },
     ],
   },
@@ -73,6 +74,9 @@ export const metadata: Metadata = {
     ],
     apple: "/quizzy-favicon.svg",
     shortcut: "/quizzy-favicon.svg",
+  },
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
   },
 };
 

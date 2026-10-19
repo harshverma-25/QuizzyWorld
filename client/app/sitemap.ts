@@ -18,6 +18,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 0.9,
     },
+    {
+      url: getAbsoluteUrl("/create"),
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
     ...Object.keys(VERIFIED_CATEGORIES).map((slug) => ({
       url: getAbsoluteUrl(`/categories/${slug}`),
       lastModified,

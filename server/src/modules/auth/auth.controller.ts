@@ -58,6 +58,24 @@ export class AuthController {
   }
 
   /**
+   * POST /api/v1/auth/google
+   * Authenticates a user with Google ID token, OAuth code, or access token.
+   */
+  async googleLogin(req: Request, res: Response): Promise<void> {
+    const result = await authService.googleLogin(req.body);
+
+    // Set HttpOnly refresh token cookie (SameSite=None in production for cross-site Vercel <-> Render)
+    res.cookie('refreshToken', result.refreshToken, getRefreshCookieOptions());
+
+    // Strip refreshToken from JSON body — it is delivered only via the HttpOnly cookie
+    const { refreshToken: _rt, ...safeResult } = result;
+
+    res.status(200).json(
+      new ApiResponse(200, safeResult, 'Logged in with Google successfully.')
+    );
+  }
+
+  /**
    * POST /api/v1/auth/refresh
    * Obtains a new access token using a refresh token.
    */

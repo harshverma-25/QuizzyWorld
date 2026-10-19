@@ -27,6 +27,7 @@ export interface IUser {
   highestWinStreak?: number;
   isGuest?: boolean;
   role?: 'user' | 'guest' | 'admin';
+  googleId?: string;
   createdAt: Date;
   updatedAt: Date;
 }

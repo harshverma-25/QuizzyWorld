@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useApiClient } from "@/hooks/useApiClient";
 import { setNativeSession } from "@/features/auth/nativeAuth";
 import { setGuestSession } from "@/features/auth/guestAuth";
+import { GoogleSignInButton } from "@/features/auth/components/GoogleSignInButton";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -126,13 +127,29 @@ export default function RegisterPage() {
           <CardDescription>Enter your details to create a persistent profile</CardDescription>
         </CardHeader>
 
+        <div className="px-6 pb-2">
+          {error && (
+            <div className="mb-4 p-3 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <GoogleSignInButton
+            label="Sign up with Google"
+            redirectPath="/"
+            onError={(msg) => setError(msg)}
+            disabled={loading || guestLoading}
+          />
+
+          <div className="relative flex py-4 items-center">
+            <div className="flex-grow border-t border-border"></div>
+            <span className="flex-shrink mx-4 text-[11px] font-mono uppercase text-muted-foreground">OR EMAIL</span>
+            <div className="flex-grow border-t border-border"></div>
+          </div>
+        </div>
+
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-4">
-            {error && (
-              <div className="p-3 text-xs font-medium text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
-                {error}
-              </div>
-            )}
+          <CardContent className="space-y-4 pt-0">
 
             <div className="space-y-2">
               <label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">Email Address</label>

@@ -46,3 +46,20 @@ export const refreshSchema = z.object({
   }).optional(),
 });
 
+export const googleAuthSchema = z.object({
+  body: z
+    .object({
+      credential: z.string().optional(),
+      idToken: z.string().optional(),
+      token: z.string().optional(),
+      code: z.string().optional(),
+      accessToken: z.string().optional(),
+    })
+    .refine(
+      (data) => !!(data.credential || data.idToken || data.token || data.code || data.accessToken),
+      {
+        message: 'Google authentication requires credential (ID token), code, or accessToken.',
+      }
+    ),
+});
+

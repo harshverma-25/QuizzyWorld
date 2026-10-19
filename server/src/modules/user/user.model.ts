@@ -4,6 +4,7 @@ import { IUserDocument } from './user.types.js';
 const UserSchema = new Schema<IUserDocument>(
   {
     email: { type: String, unique: true, sparse: true, index: true, lowercase: true, trim: true },
+    googleId: { type: String, unique: true, sparse: true, index: true },
     passwordHash: { type: String, select: false },
     refreshTokenHash: { type: String, select: false },
     refreshTokenFamilies: {

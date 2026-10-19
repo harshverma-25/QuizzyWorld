@@ -6,6 +6,7 @@ import {
   registerSchema,
   loginSchema,
   refreshSchema,
+  googleAuthSchema,
 } from './auth.validator.js';
 import { asyncHandler } from '../../shared/utils/async-handler.js';
 import { ApiError } from '../../shared/errors/api-error.js';
@@ -67,6 +68,39 @@ router.post(
   authRateLimiter,
   validateRequest(loginSchema),
   asyncHandler((req: Request, res: Response) => authController.login(req, res))
+);
+
+// POST /api/v1/auth/google
+router.post(
+  '/google',
+  authRateLimiter,
+  validateRequest(googleAuthSchema),
+  asyncHandler((req: Request, res: Response) => authController.googleLogin(req, res))
+);
+
+// GET /api/v1/auth/google/callback (for direct OAuth redirect code callback)
+router.get(
+  '/google/callback',
+  asyncHandler(async (req: Request, res: Response) => {
+    const code = req.query.code as string;
+    const error = req.query.error as string;
+    const clientRedirect = process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/login';
+
+    if (error) {
+      return res.redirect(`${clientRedirect}?error=${encodeURIComponent(error)}`);
+    }
+
+    if (!code) {
+      return res.redirect(`${clientRedirect}?error=missing_code`);
+    }
+
+    try {
+      req.body = { code };
+      await authController.googleLogin(req, res);
+    } catch (err: any) {
+      return res.redirect(`${clientRedirect}?error=${encodeURIComponent(err?.message || 'google_auth_failed')}`);
+    }
+  })
 );
 
 // POST /api/v1/auth/refresh

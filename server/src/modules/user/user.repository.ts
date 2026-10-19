@@ -36,6 +36,10 @@ export class UserRepository {
     return UserModel.findOne({ email });
   }
 
+  async findByGoogleId(googleId: string): Promise<IUserDocument | null> {
+    return UserModel.findOne({ googleId });
+  }
+
   async findByUsernameOrEmail(identifier: string): Promise<IUserDocument | null> {
     return UserModel.findOne({
       $or: [{ email: identifier }, { username: identifier }],

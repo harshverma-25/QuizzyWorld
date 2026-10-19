@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { setGuestSession } from "../guestAuth";
 import { useApiClient } from "@/hooks/useApiClient";
+import { GoogleSignInButton } from "./GoogleSignInButton";
 
 interface PlayAsGuestModalProps {
   isOpen: boolean;
@@ -149,12 +150,29 @@ export function PlayAsGuestModal({ isOpen, onClose, onSuccess }: PlayAsGuestModa
               variant="ghost"
               onClick={onClose}
               disabled={isLoading}
-              className="w-full h-9 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/40"
+              className="w-full h-9 text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/40 cursor-pointer"
             >
               Cancel
             </Button>
           </div>
         </form>
+
+        <div className="my-4 relative flex items-center">
+          <div className="flex-grow border-t border-border/60"></div>
+          <span className="flex-shrink mx-3 text-[10px] font-mono uppercase text-muted-foreground">OR PERMANENT ACCOUNT</span>
+          <div className="flex-grow border-t border-border/60"></div>
+        </div>
+
+        <GoogleSignInButton
+          label="Sign in with Google"
+          onSuccess={() => {
+            onClose();
+            if (onSuccess) onSuccess();
+            else router.refresh();
+          }}
+          onError={(msg) => setError(msg)}
+          disabled={isLoading}
+        />
 
         <div className="mt-5 pt-4 border-t border-border/50 text-center">
           <div className="flex items-center justify-center gap-1.5 text-[10px] text-muted-foreground">

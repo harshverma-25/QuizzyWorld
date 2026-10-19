@@ -182,6 +182,249 @@ export class AuthService {
   }
 
   /**
+   * Helper to issue native JWT session tokens with refresh rotation families.
+   */
+  private async issueUserSession(user: any) {
+    const accessExpiry = parseInt(env.JWT_ACCESS_EXPIRES_IN, 10) || 900;
+    const refreshExpiry = parseInt(env.JWT_REFRESH_EXPIRES_IN, 10) || 604800;
+
+    const familyId = crypto.randomUUID();
+    const accessToken = signJwtToken(
+      { sub: user._id.toString(), type: 'access', username: user.username, isGuest: false },
+      env.JWT_ACCESS_SECRET,
+      accessExpiry
+    );
+
+    const refreshToken = signJwtToken(
+      { sub: user._id.toString(), type: 'refresh', familyId },
+      env.JWT_REFRESH_SECRET,
+      refreshExpiry
+    );
+
+    const tokenHash = hashToken(refreshToken);
+    user.refreshTokenHash = tokenHash;
+
+    const now = new Date();
+    const activeFamilies = (user.refreshTokenFamilies || [])
+      .filter((f: any) => f.expiresAt > now)
+      .slice(-4);
+
+    user.refreshTokenFamilies = [
+      ...activeFamilies,
+      {
+        familyId,
+        tokenHash,
+        usedHashes: [],
+        expiresAt: new Date(Date.now() + refreshExpiry * 1000),
+        createdAt: new Date(),
+      },
+    ];
+    await user.save();
+    userRepository.invalidate(user._id.toString());
+
+    return {
+      accessToken,
+      refreshToken,
+      expiresIn: accessExpiry,
+      user: {
+        _id: user._id.toString(),
+        id: user._id.toString(),
+        email: user.email,
+        username: user.username,
+        displayName: user.displayName,
+        avatar: user.avatar,
+        isGuest: false,
+        role: user.role,
+      },
+    };
+  }
+
+  /**
+   * Authenticate or register a user using Google OAuth.
+   * Supports Google ID Token (credential/idToken), OAuth authorization code (code),
+   * or Google OAuth Access Token (accessToken).
+   */
+  async googleLogin(params: {
+    credential?: string;
+    idToken?: string;
+    token?: string;
+    code?: string;
+    accessToken?: string;
+  }): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+    user: any;
+  }> {
+    const idToken = params.credential || params.idToken || params.token;
+    let googleProfile: {
+      sub: string;
+      email?: string;
+      name?: string;
+      picture?: string;
+    } | null = null;
+
+    // 1. Direct ID Token verification (Google Identity Services / One Tap)
+    if (idToken) {
+      try {
+        const verifyUrl = `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`;
+        const response = await fetch(verifyUrl);
+        if (!response.ok) {
+          const errData = await response.text();
+          logger.warn(`Google tokeninfo verification failed: ${errData}`);
+          throw new ApiError(401, 'Invalid Google ID token');
+        }
+
+        const data: any = await response.json();
+        // If GOOGLE_CLIENT_ID is configured, verify token audience matches
+        if (env.GOOGLE_CLIENT_ID && data.aud && data.aud !== env.GOOGLE_CLIENT_ID) {
+          logger.warn(`Google token audience mismatch. Expected: ${env.GOOGLE_CLIENT_ID}, got: ${data.aud}`);
+          throw new ApiError(401, 'Google token audience mismatch');
+        }
+
+        if (!data.sub) {
+          throw new ApiError(401, 'Invalid Google token payload: missing sub');
+        }
+
+        googleProfile = {
+          sub: data.sub,
+          email: data.email,
+          name: data.name || data.given_name,
+          picture: data.picture,
+        };
+      } catch (err: any) {
+        if (err instanceof ApiError) throw err;
+        logger.error(`Error verifying Google ID token: ${err?.message}`);
+        throw new ApiError(401, 'Failed to verify Google token with Google services');
+      }
+    } else if (params.code) {
+      // 2. OAuth authorization code exchange
+      try {
+        if (!env.GOOGLE_CLIENT_ID || !env.GOOGLE_CLIENT_SECRET) {
+          throw new ApiError(500, 'Server is missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET configuration');
+        }
+
+        const tokenUrl = 'https://oauth2.googleapis.com/token';
+        const redirectUri = env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/login';
+
+        const tokenRes = await fetch(tokenUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            code: params.code,
+            client_id: env.GOOGLE_CLIENT_ID,
+            client_secret: env.GOOGLE_CLIENT_SECRET,
+            redirect_uri: redirectUri,
+            grant_type: 'authorization_code',
+          }),
+        });
+
+        if (!tokenRes.ok) {
+          const errText = await tokenRes.text();
+          logger.warn(`Google token exchange failed: ${errText}`);
+          throw new ApiError(401, 'Failed to exchange Google authorization code');
+        }
+
+        const tokenData: any = await tokenRes.json();
+        if (tokenData.id_token) {
+          return this.googleLogin({ idToken: tokenData.id_token });
+        } else if (tokenData.access_token) {
+          return this.googleLogin({ accessToken: tokenData.access_token });
+        } else {
+          throw new ApiError(401, 'Google did not return id_token or access_token');
+        }
+      } catch (err: any) {
+        if (err instanceof ApiError) throw err;
+        logger.error(`Error exchanging Google code: ${err?.message}`);
+        throw new ApiError(401, 'Failed to exchange authorization code with Google');
+      }
+    } else if (params.accessToken) {
+      // 3. Userinfo fetch via access token
+      try {
+        const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+          headers: { Authorization: `Bearer ${params.accessToken}` },
+        });
+
+        if (!userInfoRes.ok) {
+          throw new ApiError(401, 'Invalid Google access token');
+        }
+
+        const data: any = await userInfoRes.json();
+        googleProfile = {
+          sub: data.sub,
+          email: data.email,
+          name: data.name || data.given_name,
+          picture: data.picture,
+        };
+      } catch (err: any) {
+        if (err instanceof ApiError) throw err;
+        logger.error(`Error fetching Google userinfo: ${err?.message}`);
+        throw new ApiError(401, 'Failed to fetch user information from Google');
+      }
+    }
+
+    if (!googleProfile || !googleProfile.sub) {
+      throw new ApiError(401, 'Could not retrieve Google profile');
+    }
+
+    const { sub: googleId, email, name, picture } = googleProfile;
+
+    // Step A: Find existing user by googleId
+    let user = await userRepository.findByGoogleId(googleId);
+
+    // Step B: If not found by googleId, check by email
+    if (!user && email) {
+      user = await userRepository.findByEmail(email.toLowerCase().trim());
+      if (user) {
+        // Link googleId to existing user account
+        user.googleId = googleId;
+        if (!user.avatar && picture) {
+          user.avatar = picture;
+        }
+        await user.save();
+        userRepository.invalidate(user._id.toString());
+        logger.info(`Linked Google account (${googleId}) to existing user: ${user.username}`);
+      }
+    }
+
+    // Step C: If still not found, create a new user
+    if (!user) {
+      // Generate clean unique username
+      let baseUsername = (email ? email.split('@')[0] : (name || 'player'))
+        .toLowerCase()
+        .replace(/[^a-z0-9_]/g, '')
+        .slice(0, 18);
+
+      if (baseUsername.length < 3) {
+        baseUsername = `player_${baseUsername || 'user'}`;
+      }
+
+      let chosenUsername = baseUsername;
+      let counter = 1;
+      while (await userRepository.findByUsername(chosenUsername)) {
+        chosenUsername = `${baseUsername.slice(0, 14)}_${counter++}`;
+      }
+
+      const avatar = picture || generateLocalSvgAvatar(chosenUsername);
+      const displayName = name?.trim() || chosenUsername;
+
+      user = await userRepository.create({
+        email: email ? email.toLowerCase().trim() : undefined,
+        googleId,
+        username: chosenUsername,
+        displayName,
+        avatar,
+        isGuest: false,
+        role: 'user',
+      });
+
+      logger.info(`Created new user via Google Sign-In: ${user.username} (${user._id})`);
+    }
+
+    return this.issueUserSession(user);
+  }
+
+  /**
    * Refresh an access token using a valid refresh token.
    * Enforces refresh token rotation and family-based reuse detection (RFC 6749 §10.4).
    */
